@@ -63,10 +63,12 @@ sol::table open(sol::this_state ts) {
     });
 
     myModule.set_function("addEntity", [](
-        std::uint32_t nModel = 0
+        std::uint32_t nModel = 0,
+        float textureSizeX = 256.f,
+        float textureSizeY = 256.f
         ) 
     {
-        return CEntityRender::GetInstance()->AddEntity(nModel);
+        return CEntityRender::GetInstance()->AddEntity(nModel, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0, 0, 0, 0 }, { textureSizeX, textureSizeY });
     });
 
     return myModule;

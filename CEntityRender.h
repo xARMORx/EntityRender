@@ -8,6 +8,7 @@ Original code: https://gist.github.com/imring/a6f5f3ec629bf23aba3dbfeb9f2dd84c
 #include "main.h"
 #include "plugin.h"
 #include "CVisibilityPlugins.h"
+#include <CStreaming.h>
 #include "CScene.h"
 #include "extensions/ScriptCommands.h"
 #include "CModelInfo.h"
