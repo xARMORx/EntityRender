@@ -67,11 +67,11 @@ void CEntityRender::BeginCamera(tDraw& draw, RwRaster** pRaster)
 	RwCameraBeginUpdate(draw.pCamera);
 	this->AddLightToScene(draw.pLight);
 
-	RwRenderStateSet(rwRENDERSTATECULLMODE, RWRSTATE(rwCULLMODECULLBACK));
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, RWRSTATE(TRUE));
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, RWRSTATE(TRUE));
-	RwRenderStateSet(rwRENDERSTATESHADEMODE, RWRSTATE(rwSHADEMODEGOURAUD));
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE, RWRSTATE(FALSE));
+	RwRenderStateSet(rwRENDERSTATECULLMODE, reinterpret_cast<void*>(rwCULLMODECULLBACK));
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(TRUE));
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(TRUE));
+	RwRenderStateSet(rwRENDERSTATESHADEMODE, reinterpret_cast<void*>(rwSHADEMODEGOURAUD));
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, reinterpret_cast<void*>(FALSE));
 }
 
 void CEntityRender::EndCamera(const tDraw& draw)
@@ -104,6 +104,7 @@ void CEntityRender::RotateEntity(CEntity* pEntity, const RwV3d& vRotate)
 void CEntityRender::UpdateMatrix(CEntity* pEntity, RwMatrix* pRwMatrix)
 {
 	if (!pEntity || !pRwMatrix) return;
+	if (!pEntity->m_pRwObject) return;
 
 	RwFrame* pFrame = static_cast<RwFrame*>(pEntity->m_pRwObject->parent);
 	pEntity->Remove();
@@ -139,9 +140,12 @@ void CEntityRender::RenderEntity(tDraw& draw, CEntity* pEntity)
 
 void CEntityRender::RenderPed(tDraw& draw)
 {
-	Command<Commands::REQUEST_MODEL>(draw.nModel);
-	Command<Commands::LOAD_ALL_MODELS_NOW>();
-	if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	bool exist = Command<Commands::HAS_MODEL_LOADED>(draw.nModel);
+	if (!exist) {
+		Command<Commands::REQUEST_MODEL>(draw.nModel);
+		Command<Commands::LOAD_ALL_MODELS_NOW>();
+		if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	}
 
 	std::uint32_t nHandle{};
 	Command<Commands::CREATE_CHAR>(0, draw.nModel, 0.0f, 0.0f, 50.0f, &nHandle);
@@ -157,6 +161,10 @@ void CEntityRender::RenderPed(tDraw& draw)
 	RpAnimBlendClumpUpdateAnimations(pPed->m_pRwClump, 100.0f, true);
 	this->RenderEntity(draw, pPed);
 	Command<Commands::DELETE_CHAR>(nHandle);
+
+	if (!exist) {
+		CStreaming::RemoveModel(draw.nModel);
+	}
 }
 
 void CEntityRender::RenderVehicle(tDraw& draw)
@@ -165,10 +173,16 @@ void CEntityRender::RenderVehicle(tDraw& draw)
 		draw.nModel = 538;
 	else if (draw.nModel == 569)
 		draw.nModel = 537;
+	
+	if (CModelInfo::IsBoatModel(draw.nModel))
+		draw.nModel = 400;
 
-	Command<Commands::REQUEST_MODEL>(draw.nModel);
-	Command<Commands::LOAD_ALL_MODELS_NOW>();
-	if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	bool exist = Command<Commands::HAS_MODEL_LOADED>(draw.nModel);
+	if (!exist) {
+		Command<Commands::REQUEST_MODEL>(draw.nModel);
+		Command<Commands::LOAD_ALL_MODELS_NOW>();
+		if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	}
 
 	std::uint32_t nHandle{};
 	Command<Commands::CREATE_CAR>(draw.nModel, 0.0f, 0.0f, 50.f, &nHandle);
@@ -188,13 +202,20 @@ void CEntityRender::RenderVehicle(tDraw& draw)
 
 	this->RenderEntity(draw, pVehicle);
 	Command<Commands::DELETE_CAR>(nHandle);
+
+	if (!exist) {
+		CStreaming::RemoveModel(draw.nModel);
+	}
 }
 
 void CEntityRender::RenderObject(tDraw& draw)
 {
-	Command<Commands::REQUEST_MODEL>(draw.nModel);
-	Command<Commands::LOAD_ALL_MODELS_NOW>();
-	if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	bool exist = Command<Commands::HAS_MODEL_LOADED>(draw.nModel);
+	if (!exist) {
+		Command<Commands::REQUEST_MODEL>(draw.nModel);
+		Command<Commands::LOAD_ALL_MODELS_NOW>();
+		if (!Command<Commands::HAS_MODEL_LOADED>(draw.nModel)) return;
+	}
 
 	std::uint32_t nHandle{};
 	Command<Commands::CREATE_OBJECT>(draw.nModel, 0.0f, 0.0f, 50.0f, &nHandle);
@@ -207,15 +228,21 @@ void CEntityRender::RenderObject(tDraw& draw)
 	this->RotateEntity(pObject, draw.vRotate);
 	this->RenderEntity(draw, pObject);
 	Command<Commands::DELETE_OBJECT>(nHandle);
+
+	if (!exist) {
+		CStreaming::RemoveModel(draw.nModel);
+	}
 }
 
 void CEntityRender::Render()
 {
 	for (auto& it : this->m_DrawMap) {
 		if (it.second.bNeedRecreate) {
-			RwTextureDestroy(it.second.pTexture);
-			it.second.pTexture = nullptr;
-			it.second.bNeedRecreate = false;
+			if (it.second.pTexture) {
+				RwTextureDestroy(it.second.pTexture);
+				it.second.pTexture = nullptr;
+				it.second.bNeedRecreate = false;
+			}
 		}
 
 		if (!it.second.pTexture) {
@@ -263,6 +290,8 @@ CEntityRender* CEntityRender::GetInstance()
 void CEntityRender::Init()
 {
 	printf("CEntity Render init!\n");
+	// Расширение CPool<CVehicleModelInfo::CVehicleStructure,CVehicleModelInfo::CVehicleStructure>
+	patch::SetUChar(0x5B8FE3 + 1, 0xFF);
 	this->GetInstance()->BeforeMainRender += [this] { this->Render(); };
 }
 
@@ -271,6 +300,11 @@ void* CEntityRender::GetD3D9Texture(std::uint32_t nId)
 	auto it = this->m_DrawMap.find(nId);
 	if (it == this->m_DrawMap.end()) {
 		printf("Error id %d is not exist\n", nId);
+		return nullptr;
+	}
+
+	if (!it->second.pTexture || !it->second.pTexture->raster) {
+		printf("Texture id %d is not exist\n", nId);
 		return nullptr;
 	}
 
