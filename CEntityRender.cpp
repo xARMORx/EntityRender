@@ -11,7 +11,6 @@ void CEntityRender::CreateLight(RpLight** ppLight)
 {
 	RpLight* pLight = RpLightCreate(2);
 	if (pLight) {
-		printf("Set light color %p\n", pLight);
 		RwRGBAReal color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		RpLightSetColor(pLight, &color);
 		*ppLight = pLight;
@@ -20,7 +19,7 @@ void CEntityRender::CreateLight(RpLight** ppLight)
 
 void CEntityRender::CreateTexture(RwRaster** ppBuffer, RwTexture** ppTexture, const RwV2d& vTextureSize)
 {
-	*ppBuffer = RwRasterCreate(static_cast<RwInt32>(vTextureSize.x), static_cast<RwInt32>(vTextureSize.y), 0, rwRASTERTYPECAMERATEXTURE);
+	*ppBuffer = RwRasterCreate(static_cast<RwInt32>(vTextureSize.x), static_cast<RwInt32>(vTextureSize.y), 0, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 	if (!*ppBuffer) return;
 	*ppTexture = RwTextureCreate(*ppBuffer);
 }
@@ -289,7 +288,6 @@ CEntityRender* CEntityRender::GetInstance()
 
 void CEntityRender::Init()
 {
-	printf("CEntity Render init!\n");
 	// Расширение CPool<CVehicleModelInfo::CVehicleStructure,CVehicleModelInfo::CVehicleStructure>
 	patch::SetUChar(0x5B8FE3 + 1, 0xFF);
 	this->GetInstance()->BeforeMainRender += [this] { this->Render(); };
@@ -299,12 +297,10 @@ void* CEntityRender::GetD3D9Texture(std::uint32_t nId)
 {
 	auto it = this->m_DrawMap.find(nId);
 	if (it == this->m_DrawMap.end()) {
-		printf("Error id %d is not exist\n", nId);
 		return nullptr;
 	}
 
 	if (!it->second.pTexture || !it->second.pTexture->raster) {
-		printf("Texture id %d is not exist\n", nId);
 		return nullptr;
 	}
 
@@ -401,17 +397,14 @@ std::uint32_t CEntityRender::AddEntity(std::uint32_t nModel, const RwV3d& vPos, 
     tDraw newDraw{};
 
     this->CreateLight(&newDraw.pLight);
-	printf("pLight: %p!\n", newDraw.pLight);
     if (!newDraw.pLight) return -1;
 	newDraw.vTextureSize = vTextureSize;
     newDraw.pZBuffer = RwRasterCreate(static_cast<RwInt32>(vTextureSize.x), static_cast<RwInt32>(vTextureSize.y), 0, rwRASTERTYPEZBUFFER);
     this->CreateTexture(&newDraw.pBuffer, &newDraw.pTexture, vTextureSize);
-	printf("pZBuffer: %p | pTexture: %p | pBuffer: %p\n", newDraw.pZBuffer, newDraw.pTexture, newDraw.pBuffer);
 	if (!newDraw.pZBuffer || !newDraw.pTexture || !newDraw.pBuffer) return -1;
 
     newDraw.pCamera = RwCameraCreate();
     this->CreateFrame(&newDraw.pFrame);
-	printf("pCamera: %p | pFrame: %p\n", newDraw.pCamera, newDraw.pFrame);
     if (!newDraw.pCamera || !newDraw.pFrame) return -1;
 
     newDraw.pCamera->frameBuffer = newDraw.pBuffer;
@@ -424,12 +417,11 @@ std::uint32_t CEntityRender::AddEntity(std::uint32_t nModel, const RwV3d& vPos, 
     RwCameraSetViewWindow(newDraw.pCamera, &vViewMin);
     RwCameraSetProjection(newDraw.pCamera, rwPERSPECTIVE);
     this->AddCameraToScene(newDraw.pCamera);
+	newDraw.nColor = nBackgroundColor;
 
     newDraw.bIsInit = true;
 
     auto result = this->m_DrawMap.emplace(++this->m_nTexturesCount, newDraw);
-
-	printf("%d\n", this->m_nTexturesCount);
 
     if (!result.second) return -1;
 

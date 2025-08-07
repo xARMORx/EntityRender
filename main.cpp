@@ -68,7 +68,7 @@ sol::table open(sol::this_state ts) {
         float textureSizeY = 256.f
         ) 
     {
-        return CEntityRender::GetInstance()->AddEntity(nModel, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0, 0, 0, 0 }, { textureSizeX, textureSizeY });
+        return CEntityRender::GetInstance()->AddEntity(nModel, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0, 0, 0, 255 }, { textureSizeX, textureSizeY });
     });
 
     return myModule;

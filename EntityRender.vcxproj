@@ -59,7 +59,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>.\output\Release</OutDir>
+    <OutDir>$(GTA_SA_DIR)\moonloader\lib\</OutDir>
     <IntDir>.\output\obj\Release\</IntDir>
     <TargetName>EntityRender</TargetName>
     <TargetExt>.dll</TargetExt>
