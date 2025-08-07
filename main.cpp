@@ -7,8 +7,9 @@ Original code: https://gist.github.com/imring/a6f5f3ec629bf23aba3dbfeb9f2dd84c
 
 sol::table open(sol::this_state ts) {
     sol::state_view lua{ ts };
-    lua["VERSION"] = 0.1;
     sol::table myModule = lua.create_table();
+
+    myModule["VERSION"] = 1.7;
 
     myModule.set_function("init", []() {
         CEntityRender::GetInstance()->Init();
